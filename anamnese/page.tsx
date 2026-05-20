@@ -26,8 +26,8 @@ export default function AnamnesePage() {
       supabase.from('clientes').select('id, nome').eq('prof_id', user.id).eq('ativo', true).order('nome'),
       supabase.from('anamneses').select('*, cliente:clientes(nome)').eq('prof_id', user.id).order('data_anam', { ascending: false }),
     ])
-    setClientes((cls ?? []) as Cliente[])
-    setHistorico((hist ?? []) as Anamnese[])
+    setClientes((cls as Cliente[]) ?? [])
+    setHistorico((hist as Anamnese[]) ?? [])
   }
 
   useEffect(() => { load() }, [])
