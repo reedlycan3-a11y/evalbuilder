@@ -1,0 +1,43 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --sb: #1a2e1a;
+  --sb-border: #2d4a2d;
+  --sb-hover: #243824;
+  --sb-active: #2d4a2d;
+}
+
+* { box-sizing: border-box; }
+
+@layer components {
+  .card { @apply bg-white rounded-xl border border-gray-100 p-5; }
+  .card-sm { @apply bg-white rounded-xl border border-gray-100 p-4; }
+  .btn-primary { @apply inline-flex items-center gap-2 px-4 py-2 bg-brand-400 text-white rounded-lg text-sm font-medium hover:bg-brand-600 transition-colors cursor-pointer border-0; }
+  .btn-nutri { @apply inline-flex items-center gap-2 px-4 py-2 bg-nutri-400 text-white rounded-lg text-sm font-medium hover:bg-nutri-600 transition-colors cursor-pointer border-0; }
+  .btn-secondary { @apply inline-flex items-center gap-2 px-4 py-2 bg-white text-gray-700 rounded-lg text-sm font-medium border border-gray-200 hover:bg-gray-50 transition-colors cursor-pointer; }
+  .btn-ghost { @apply inline-flex items-center gap-2 px-3 py-1.5 text-gray-500 rounded-lg text-sm hover:bg-gray-50 transition-colors cursor-pointer border-0 bg-transparent; }
+  .btn-danger { @apply inline-flex items-center gap-2 px-3 py-1.5 bg-red-50 text-red-600 rounded-lg text-sm border border-red-100 hover:bg-red-100 transition-colors cursor-pointer; }
+  .btn-sm { @apply px-3 py-1.5 text-xs; }
+  .input { @apply w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-400 transition-colors bg-white text-gray-900; }
+  .label { @apply block text-xs font-medium text-gray-500 mb-1; }
+  .badge-ok { @apply inline-flex items-center gap-1 px-2 py-0.5 bg-green-50 text-green-800 rounded-full text-xs font-medium; }
+  .badge-warn { @apply inline-flex items-center gap-1 px-2 py-0.5 bg-amber-50 text-amber-700 rounded-full text-xs font-medium; }
+  .badge-danger { @apply inline-flex items-center gap-1 px-2 py-0.5 bg-red-50 text-red-600 rounded-full text-xs font-medium; }
+  .badge-gray { @apply inline-flex items-center gap-1 px-2 py-0.5 bg-gray-100 text-gray-500 rounded-full text-xs font-medium; }
+  .badge-teal { @apply inline-flex items-center gap-1 px-2 py-0.5 bg-teal-50 text-teal-700 rounded-full text-xs font-medium; }
+  .badge-purple { @apply inline-flex items-center gap-1 px-2 py-0.5 bg-purple-50 text-purple-700 rounded-full text-xs font-medium; }
+  .stat-card { @apply bg-white rounded-xl border border-gray-100 p-4; }
+  .section-title { @apply text-xs font-semibold text-brand-600 tracking-widest uppercase border-b-2 border-brand-50 pb-2 mb-4 mt-6 first:mt-0; }
+  .section-title-nutri { @apply text-xs font-semibold text-nutri-600 tracking-widest uppercase border-b-2 border-teal-50 pb-2 mb-4 mt-6 first:mt-0; }
+  .form-grid-2 { @apply grid grid-cols-2 gap-4; }
+  .form-grid-3 { @apply grid grid-cols-3 gap-4; }
+  .table-row { @apply flex items-center gap-3 py-2.5 border-b border-gray-50 last:border-0 hover:bg-gray-50/50 -mx-1 px-1 rounded; }
+  .day-card { @apply bg-white border border-gray-100 rounded-xl overflow-hidden mb-3; }
+  .day-header { @apply flex items-center justify-between bg-gray-50 px-4 py-2.5 cursor-pointer select-none; }
+  .ex-row { @apply flex items-center gap-3 py-2 border-b border-gray-50 last:border-0 text-sm; }
+  .meal-card { @apply bg-white border border-gray-100 rounded-xl overflow-hidden mb-3; }
+  .meal-header { @apply flex items-center justify-between bg-teal-50/50 px-4 py-2.5; }
+  .food-row { @apply flex items-center gap-2 py-1.5 border-b border-gray-50 last:border-0 text-sm; }
+}
