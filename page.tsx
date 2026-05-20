@@ -1,91 +1,152 @@
-import { createServerSupabaseClient } from '@/lib/supabase-server'
-import { notFound } from 'next/navigation'
+'use client'
+import { useEffect, useState } from 'react'
+import { createClient } from '@/lib/supabase'
+import type { Cliente, Anamnese } from '@/types'
 import { formatarData } from '@/types'
+import { PageHeader, Avatar, EmptyState, showToast } from '@/components/ui'
+import { Plus, Download, Save } from 'lucide-react'
+import { gerarPDFAnamnese } from '@/lib/pdf'
 
-export default async function EvalPublicPage({ params }: { params: { token: string } }) {
-  const supabase = createServerSupabaseClient()
-  const { data: av } = await supabase
-    .from('avaliacoes')
-    .select('*, cliente:clientes(nome, sexo, data_nasc, objetivo, whatsapp, email)')
-    .eq('link_token', params.token)
-    .single()
+export default function AnamnesePage() {
+  const supabase = createClient()
+  const [tab, setTab] = useState<'nova' | 'historico'>('nova')
+  const [clientes, setClientes] = useState<Cliente[]>([])
+  const [historico, setHistorico] = useState<Anamnese[]>([])
+  const [salvando, setSalvando] = useState(false)
+  const [form, setForm] = useState({
+    cliente_id: '', data_anam: new Date().toISOString().split('T')[0],
+    patologias: '', medicamentos: '', alergias: '', cirurgias: '',
+    refeicoes_dia: '4', ingesta_hidrica: '1–2L', consome_alcool: 'Não', suplementos: '', queixas: '',
+  })
 
-  if (!av) return notFound()
-  const cl = av.cliente as any
+  const load = async () => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    const [{ data: cls }, { data: hist }] = await Promise.all([
+      supabase.from('clientes').select('id, nome').eq('prof_id', user.id).eq('ativo', true).order('nome'),
+      supabase.from('anamneses').select('*, cliente:clientes(nome)').eq('prof_id', user.id).order('data_anam', { ascending: false }),
+    ])
+    setClientes((cls ?? []) as Cliente[])
+    setHistorico((hist ?? []) as Anamnese[])
+  }
+
+  useEffect(() => { load() }, [])
+
+  const set = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }))
+
+  const salvar = async () => {
+    if (!form.cliente_id) { showToast('Selecione um paciente'); return }
+    setSalvando(true)
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    const { error } = await supabase.from('anamneses').insert({ ...form, prof_id: user.id, refeicoes_dia: parseInt(form.refeicoes_dia) || null })
+    setSalvando(false)
+    if (error) { showToast('Erro: ' + error.message); return }
+    showToast('Anamnese salva!')
+    setTab('historico')
+    load()
+  }
+
+  const baixarPDF = async (an: Anamnese) => {
+    const cl = clientes.find(c => c.id === an.cliente_id) || (an.cliente as any)
+    await gerarPDFAnamnese(an, cl)
+  }
+
+  const F = ({ label, id, type = 'text', placeholder = '' }: any) => (
+    <div>
+      <label className="label">{label}</label>
+      <input type={type} className="input" placeholder={placeholder} value={(form as any)[id]} onChange={e => set(id, e.target.value)} />
+    </div>
+  )
+
+  const S = ({ label, id, opts }: any) => (
+    <div>
+      <label className="label">{label}</label>
+      <select className="input" value={(form as any)[id]} onChange={e => set(id, e.target.value)}>
+        {opts.map((o: string) => <option key={o}>{o}</option>)}
+      </select>
+    </div>
+  )
 
   return (
-    <div className="min-h-screen bg-gray-50 py-10 px-4">
-      <div className="max-w-2xl mx-auto">
-        <div className="bg-brand-600 rounded-t-2xl p-6 text-white text-center">
-          <div className="text-xl font-bold mb-1">AVALIAÇÃO FÍSICA</div>
-          <div className="text-sm opacity-90">{cl?.nome} · {formatarData(av.data_aval)}</div>
-        </div>
-        <div className="bg-white rounded-b-2xl p-6 shadow-sm">
-          <Section title="Dados do aluno">
-            <Row label="Nome" value={cl?.nome} />
-            <Row label="Sexo" value={cl?.sexo} />
-            <Row label="Objetivo" value={av.objetivo} />
-            <Row label="Nível" value={av.nivel} />
-          </Section>
-          <Section title="Composição corporal">
-            <div className="grid grid-cols-3 gap-3 mb-3">
-              {[['Peso', av.peso, 'kg'],['Altura', av.altura, 'cm'],['IMC', av.imc, ''],
-                ['% Gordura', av.perc_gordura, '%'],['Massa magra', av.massa_magra, 'kg'],['Massa gorda', av.massa_gorda, 'kg'],
-              ].map(([l, v, u]) => v != null && (
-                <div key={String(l)} className="bg-brand-50 rounded-xl p-3 text-center">
-                  <div className="text-xl font-bold text-brand-600">{String(v)}{u}</div>
-                  <div className="text-xs text-brand-800 mt-0.5">{String(l)}</div>
-                </div>
-              ))}
-            </div>
-          </Section>
-          {(av.circ_cintura || av.circ_torax) && (
-            <Section title="Circunferências">
-              <div className="grid grid-cols-2 gap-2">
-                <Row label="Tórax" value={av.circ_torax ? `${av.circ_torax} cm` : undefined} />
-                <Row label="Cintura" value={av.circ_cintura ? `${av.circ_cintura} cm` : undefined} />
-                <Row label="Quadril" value={av.circ_quadril ? `${av.circ_quadril} cm` : undefined} />
-                <Row label="Braço D" value={av.circ_braco_d ? `${av.circ_braco_d} cm` : undefined} />
-                <Row label="Coxa D" value={av.circ_coxa_d ? `${av.circ_coxa_d} cm` : undefined} />
-                <Row label="Panturrilha D" value={av.circ_panturrilha ? `${av.circ_panturrilha} cm` : undefined} />
-              </div>
-            </Section>
-          )}
-          {(av.resist_cardio || av.flexibilidade) && (
-            <Section title="Testes físicos">
-              <Row label="Resistência cardiovascular" value={av.resist_cardio} />
-              <Row label="Flexibilidade" value={av.flexibilidade} />
-              <Row label="Força abdominal" value={av.forca_abdominal ? `${av.forca_abdominal} reps` : undefined} />
-              <Row label="Pressão arterial" value={av.pressao_arterial} />
-            </Section>
-          )}
-          {av.observacoes && (
-            <Section title="Observações">
-              <p className="text-sm text-gray-700 bg-gray-50 rounded-lg p-3 leading-relaxed">{av.observacoes}</p>
-            </Section>
-          )}
-          <p className="text-center text-xs text-gray-300 mt-6">Gerado por EvalBuilder · evalbuilder.com.br</p>
-        </div>
+    <>
+      <link href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css" rel="stylesheet" />
+      <PageHeader title="Anamnese nutricional" subtitle="Histórico alimentar e clínico do paciente"
+        action={<button className="btn-nutri" onClick={() => setTab('nova')}><Plus size={14} /> Nova anamnese</button>}
+      />
+
+      <div className="flex gap-1 bg-gray-100 p-1 rounded-lg mb-5 w-fit">
+        {(['nova','historico'] as const).map(t => (
+          <button key={t} onClick={() => setTab(t)}
+            className={`px-4 py-1.5 rounded-md text-sm transition-all ${tab === t ? 'bg-white font-medium shadow-sm' : 'text-gray-500'}`}>
+            {t === 'nova' ? 'Nova anamnese' : 'Histórico'}
+          </button>
+        ))}
       </div>
-    </div>
-  )
-}
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div className="mb-5">
-      <h2 className="text-xs font-bold text-brand-600 tracking-widest uppercase border-b-2 border-brand-50 pb-1.5 mb-3">{title}</h2>
-      {children}
-    </div>
-  )
-}
+      {tab === 'nova' && (
+        <div className="card max-w-2xl">
+          <div className="form-grid-2">
+            <div><label className="label">Paciente *</label>
+              <select className="input" value={form.cliente_id} onChange={e => set('cliente_id', e.target.value)}>
+                <option value="">— Selecione —</option>
+                {clientes.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+              </select>
+            </div>
+            <div><label className="label">Data</label>
+              <input type="date" className="input" value={form.data_anam} onChange={e => set('data_anam', e.target.value)} />
+            </div>
+          </div>
 
-function Row({ label, value }: { label: string; value?: any }) {
-  if (value == null || value === '') return null
-  return (
-    <div className="flex justify-between py-1.5 border-b border-gray-50 last:border-0 text-sm">
-      <span className="text-gray-400">{label}</span>
-      <span className="font-medium">{String(value)}</span>
-    </div>
+          <div className="section-title-nutri">Histórico clínico</div>
+          <div className="form-grid-2">
+            <F label="Patologias" id="patologias" placeholder="Hipertensão, diabetes, hipotireoidismo..." />
+            <F label="Medicamentos em uso" id="medicamentos" placeholder="Losartana, metformina..." />
+            <F label="Alergias e intolerâncias" id="alergias" placeholder="Glúten, lactose, amendoim..." />
+            <F label="Cirurgias anteriores" id="cirurgias" placeholder="Bariátrica, apendicite..." />
+          </div>
+
+          <div className="section-title-nutri">Hábitos alimentares</div>
+          <div className="form-grid-3">
+            <S label="Refeições por dia" id="refeicoes_dia" opts={['2','3','4','5','6','7+']} />
+            <S label="Ingesta hídrica" id="ingesta_hidrica" opts={['Menos de 1L','1–2L','2–3L','Mais de 3L']} />
+            <S label="Consome álcool?" id="consome_alcool" opts={['Não','Raramente','1–2x/semana','3–4x/semana','Diariamente']} />
+          </div>
+          <F label="Suplementos em uso" id="suplementos" placeholder="Whey protein, creatina, vitamina D, ômega-3..." />
+
+          <div className="mt-4">
+            <label className="label">Queixas e objetivos nutricionais</label>
+            <textarea className="input min-h-[90px] resize-y mt-1" placeholder="Descreva o motivo da consulta, principais dificuldades e expectativas do paciente..." value={form.queixas} onChange={e => set('queixas', e.target.value)} />
+          </div>
+
+          <div className="flex justify-end gap-2 pt-5 mt-2 border-t border-gray-100">
+            <button className="btn-secondary" onClick={() => setTab('historico')}>Cancelar</button>
+            <button className="btn-nutri" onClick={salvar} disabled={salvando}>
+              <Save size={14} /> {salvando ? 'Salvando...' : 'Salvar anamnese'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {tab === 'historico' && (
+        <div className="card">
+          {!historico.length
+            ? <EmptyState icon="ti-notes-medical" title="Nenhuma anamnese registrada ainda" />
+            : historico.map(an => (
+              <div key={an.id} className="flex items-center gap-3 py-3 border-b border-gray-50 last:border-0">
+                <Avatar nome={(an.cliente as any)?.nome ?? '?'} size="sm" />
+                <div className="flex-1">
+                  <div className="font-medium text-sm">{(an.cliente as any)?.nome}</div>
+                  <div className="text-xs text-gray-400">
+                    {formatarData(an.data_anam)}{an.alergias ? ` · ${an.alergias}` : ''}
+                  </div>
+                </div>
+                <button className="btn-secondary btn-sm" onClick={() => baixarPDF(an)}><Download size={12} /> PDF</button>
+              </div>
+            ))
+          }
+        </div>
+      )}
+    </>
   )
 }
