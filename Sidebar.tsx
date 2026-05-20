@@ -4,9 +4,9 @@ import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import {
   LayoutDashboard, Users, ClipboardList,
-  NotesHealth, Salad, ClockHour4, ChartPie,
   Bell, FileText, Activity, LogOut,
 } from 'lucide-react'
+
 
 const NAV = [
   { section: 'GERAL' },
